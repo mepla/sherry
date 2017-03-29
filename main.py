@@ -36,6 +36,9 @@ class FakeCurses():
         # return raw_input(prompt)
         return ''
 
+    def getstr(self, promp=None):
+        return ''
+
 
 def ip_to_decimal(ip):
     return struct.unpack('!L', socket.inet_aton(ip))[0]
@@ -177,14 +180,18 @@ class MachineUsage(object):
 
 
 def display_current_stats(current_stats, unit=None):
+    global global_unit
     curses_screen.clear()
 
     convert_values = {'B': 1, 'kB': float(1)/float(1024),
                       'b': 8, 'kb': float(1)/float(1024) * 8,
                       'mb': float(1)/float(1024**2) * 8, 'mB': float(1)/float(1024**2)}
 
-    if not unit or unit not in convert_values:
+    if not unit:
         unit = global_unit
+
+    if unit not in convert_values:
+        unit = 'kB'
 
     convert_value = convert_values.get(unit)
 
@@ -207,6 +214,12 @@ def display_current_stats(current_stats, unit=None):
             sort_key = 'bytesPerSec'
         elif char in ['t', 'T']:
             sort_key = 'totalBytes'
+        elif char in ['u', 'U']:
+            curses_screen.nodelay(False)
+            curses_screen.addstr('\n\nEnter unit: ')
+            curses_screen.refresh()
+            string = curses_screen.getstr()
+            global_unit = string
     except:
         pass
 
