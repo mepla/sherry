@@ -1,5 +1,6 @@
 import argparse
-import os
+import curses
+import traceback
 import time
 import requests
 import socket
@@ -148,6 +149,30 @@ class MachineUsage(object):
         return return_str
 
 
+def display_current_stats(current_stats, unit=None):
+    curses_screen.clear()
+
+    convert_values = {'B': 1, 'kB': float(1)/float(1024),
+                      'b': 8, 'kb': float(1)/float(1024) * 8,
+                      'mb': float(1)/float(1024**2) * 8, 'mB': float(1)/float(1024**2)}
+
+    if not unit or unit not in convert_values:
+        unit = global_unit
+
+    convert_value = convert_values.get(unit)
+
+    header_arr = ['IP', 'MAC', "Name", 'Current ({}ps)'.format(unit), 'Total ({})'.format(unit)]
+    tab_array = []
+    for machine_stat in current_stats:
+        tab_array.append([machine_stat.ipAddress, machine_stat.macAddress,
+                          mac_to_hostname.get(machine_stat.macAddress, '-'),
+                          round(machine_stat.bytesPerSec * convert_value, 2),
+                          int(machine_stat.totalBytes * convert_value)])
+
+    curses_screen.addstr(tabulate(tab_array, headers=header_arr, tablefmt="psql"))
+    curses_screen.refresh()
+
+
 def run_indefinitely(modem_address, modem_password):
     last_run_dict = {}
     while True:
@@ -166,28 +191,6 @@ def run_indefinitely(modem_address, modem_password):
         display_current_stats(sorted_list)
         last_run_dict = dict(per_ip_modem_stats)
         time.sleep(sleep_time)
-
-
-def display_current_stats(current_stats, unit=None):
-    os.system('clear')
-    convert_values = {'B': 1, 'kB': float(1)/float(1024),
-                      'b': 8, 'kb': float(1)/float(1024) * 8,
-                      'mb': float(1)/float(1024**2) * 8, 'mB': float(1)/float(1024**2)}
-
-    if not unit or unit not in convert_values:
-        unit = global_unit
-
-    convert_value = convert_values.get(unit)
-
-    header_arr = ['IP', 'MAC', "Name", 'Current ({}ps)'.format(unit), 'Total ({})'.format(unit)]
-    tab_array = []
-    for machine_stat in current_stats:
-        tab_array.append([machine_stat.ipAddress, machine_stat.macAddress,
-                          mac_to_hostname.get(machine_stat.macAddress, '-'),
-                          round(machine_stat.bytesPerSec * convert_value, 2),
-                          int(machine_stat.totalBytes * convert_value)])
-
-    print tabulate(tab_array, headers=header_arr, tablefmt="psql")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -216,9 +219,19 @@ if __name__ == '__main__':
     global global_unit
     global_unit = results.unit
 
+    stdscr = curses.initscr()
+
+    global curses_screen
+    curses_screen = stdscr
+
     if results.reset is True:
         print 'Resetting usage data...'
         time.sleep(1)
         reset_modem_stats(ip_addr, results.password)
 
-    run_indefinitely(ip_addr, results.password)
+    try:
+        run_indefinitely(ip_addr, results.password)
+    except Exception as exc:
+        traceback.print_exc()
+    finally:
+        curses.endwin()
