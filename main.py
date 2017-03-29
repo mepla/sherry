@@ -1,5 +1,6 @@
 import argparse
 import curses
+import os
 import traceback
 import time
 import requests
@@ -8,6 +9,32 @@ import struct
 import base64
 from tabulate import tabulate
 from operator import itemgetter
+
+
+class FakeCurses():
+    def addstr(self, s):
+        print s
+
+    def refresh(self):
+        pass
+
+    def clear(self):
+        os.system('clear')
+
+    @classmethod
+    def endwin(self):
+        pass
+
+    def nodelay(self, b=None):
+        pass
+
+    def getch(self, prompt=None):
+        # return raw_input(prompt)
+        return ''
+
+    def getkey(self, prompt=None):
+        # return raw_input(prompt)
+        return ''
 
 
 def ip_to_decimal(ip):
@@ -172,6 +199,17 @@ def display_current_stats(current_stats, unit=None):
     curses_screen.addstr(tabulate(tab_array, headers=header_arr, tablefmt="psql"))
     curses_screen.refresh()
 
+    curses_screen.nodelay(True)
+    try:
+        char = curses_screen.getkey()
+        global sort_key
+        if char in ['c', 'C']:
+            sort_key = 'bytesPerSec'
+        elif char in ['t', 'T']:
+            sort_key = 'totalBytes'
+    except:
+        pass
+
 
 def run_indefinitely(modem_address, modem_password):
     last_run_dict = {}
@@ -186,7 +224,7 @@ def run_indefinitely(modem_address, modem_password):
                 per_second = float(current_total_bytes - last_total_bytes) / float(sleep_time)
                 ip_stats['bytesPerSec'] = round(per_second, 2)
 
-        sorted_list = sorted(per_ip_modem_stats.values(), key=itemgetter('bytesPerSec'), reverse=True)
+        sorted_list = sorted(per_ip_modem_stats.values(), key=itemgetter(sort_key), reverse=True)
         sorted_list = [MachineUsage(x) for x in sorted_list]
         display_current_stats(sorted_list)
         last_run_dict = dict(per_ip_modem_stats)
@@ -200,7 +238,7 @@ if __name__ == '__main__':
     parser.add_argument('-u', action='store', dest='unit', help='Unit: b, B, kb, kB, mb, mB', default='kB',
                         required=False)
     parser.add_argument('-s', action='store', dest='sleep_time', help='sleep time between each request (seconds)',
-                        default=1, required=False, type=int)
+                        default=1, required=False, type=float)
     parser.add_argument('--reset', action='store_true', dest='reset', help='Reset usage data', default=False,
                         required=False)
     parser.add_argument('-p', action='store', dest='password', help='Modem password', default=False,
@@ -215,14 +253,25 @@ if __name__ == '__main__':
 
     global sleep_time
     sleep_time = results.sleep_time
+    if sleep_time < 0.5:
+        raise Exception('sleep_time can not be less than 0.5')
 
     global global_unit
     global_unit = results.unit
 
-    stdscr = curses.initscr()
+    if os.environ.get("TERM"):
+        stdscr = curses.initscr()
+    else:
+        print '\n##################\nRunning in no Terminal mode...\n###################\n'
+        time.sleep(1)
+        stdscr = FakeCurses()
+        curses = FakeCurses
 
     global curses_screen
     curses_screen = stdscr
+
+    global sort_key
+    sort_key = 'bytesPerSec'
 
     if results.reset is True:
         print 'Resetting usage data...'
