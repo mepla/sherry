@@ -231,6 +231,8 @@ if __name__ == '__main__':
 
     try:
         run_indefinitely(ip_addr, results.password)
+    except KeyboardInterrupt:
+        pass
     except Exception as exc:
         traceback.print_exc()
     finally:
