@@ -7,6 +7,9 @@ Sherry is a simple command line tool to monitor bandwidth usage of each device c
 - This was tested and fully functional on `TP-Link Archer D20` 
 - It will probably work for any TP-Link modem or wireless router that uses the new web interface (I haven't tested it though).
 
+If your web interface looks like this you are probably good to go:
+
+![alt tag](https://github.com/mepla/sherry/raw/master/Interface.png)
 
 ## Getting started
 This is a script I put together in a day as soon as I bought an Archer D20 and realized that it doesn't have a decent bandwidth monitoring interface (although it has bandwidth limits!). Since this was a hasty attempt to only alleviate my need, it does not currently have a setup.py and can not be installed. You can use it as a standalone script in a couple of ways:
