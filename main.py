@@ -72,10 +72,7 @@ def get_modem_mac_names(modem_address, modem_password):
 
     result = _ask_modem_something(modem_address, modem_password, data, api_path='cgi?5')
 
-    if 'Unknown' in result:
-        return get_modem_mac_names(modem_address, modem_password)
-    else:
-        return result
+    return result
 
 
 def get_modem_stats(modem_address, modem_password):
