@@ -271,15 +271,15 @@ def run_indefinitely(modem_address, modem_password):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-a', action='store', dest='ip_addr', help='Modem address', default='192.168.1.1',
+    parser.add_argument('-a', action='store', dest='ip_addr', help='Modem address (Optional, defaults to: 192.168.1.1)', default='192.168.1.1',
                         required=False)
-    parser.add_argument('-u', action='store', dest='unit', help='Unit: b, B, kb, kB, mb, mB', default='kB',
+    parser.add_argument('-u', action='store', dest='unit', help='Unit: b, B, kb, kB, mb, mB (Optional, defaults to: kB)', default='kB',
                         required=False)
-    parser.add_argument('-s', action='store', dest='sleep_time', help='sleep time between each request (seconds)',
+    parser.add_argument('-s', action='store', dest='sleep_time', help='Sleep time between each request in float seconds (Optional, defaults to: 1, minimum: 0.5)',
                         default=1, required=False, type=float)
-    parser.add_argument('-p', action='store', dest='password', help='Modem password', default=False,
+    parser.add_argument('-p', action='store', dest='password', help='Modem password (Mandatory)', default=False,
                         required=True)
-    parser.add_argument('--reset', action='store_true', dest='reset', help='Reset usage data', default=False,
+    parser.add_argument('--reset', action='store_true', dest='reset', help='Reset usage data (equivalent to using the reset button in statistics menu of web interface)', default=False,
                         required=False)
 
     results = parser.parse_args()
