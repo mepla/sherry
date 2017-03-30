@@ -201,6 +201,7 @@ def display_current_stats(current_stats, unit=None):
                           int(machine_stat.totalBytes * convert_value)])
 
     curses_screen.addstr(tabulate(tab_array, headers=header_arr, tablefmt="psql"))
+    curses_screen.addstr('\n\n(q)Quit  (t)Sort Total  (c)Sort Current (u)Change Unit: ')
     curses_screen.refresh()
 
     curses_screen.nodelay(True)
@@ -217,13 +218,16 @@ def display_current_stats(current_stats, unit=None):
             curses_screen.refresh()
             string = curses_screen.getstr()
             global_unit = string
+        elif char in ['q', 'Q']:
+            global running
+            running = False
     except:
         pass
 
 
 def run_indefinitely(modem_address, modem_password):
     last_run_dict = {}
-    while True:
+    while running:
         modem_stats = get_modem_stats(modem_address, modem_password)
         per_ip_modem_stats = split_modem_stats(modem_stats)
 
@@ -282,6 +286,9 @@ if __name__ == '__main__':
 
     global sort_key
     sort_key = 'bytesPerSec'
+
+    global running
+    running = True
 
     if results.reset is True:
         print 'Resetting usage data...'
