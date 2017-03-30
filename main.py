@@ -201,7 +201,7 @@ def display_current_stats(current_stats, unit=None):
                           int(machine_stat.totalBytes * convert_value)])
 
     curses_screen.addstr(tabulate(tab_array, headers=header_arr, tablefmt="psql"))
-    curses_screen.addstr('\n\n(q)Quit  (t)Sort Total  (c)Sort Current (u)Change Unit: ')
+    curses_screen.addstr('\n\n(q)Quit (t,c,i)Sort Total,Current,IP (r)Reset Totals (h)Reset Hostnames (u)Change Unit: ')
     curses_screen.refresh()
 
     curses_screen.nodelay(True)
@@ -221,6 +221,19 @@ def display_current_stats(current_stats, unit=None):
         elif char in ['q', 'Q']:
             global running
             running = False
+        elif char in ['r', 'R']:
+            curses_screen.nodelay(False)
+            curses_screen.addstr('\n\nAre you sure you want to reset data? (y/n): ')
+            curses_screen.refresh()
+            inner_char = curses_screen.getkey()
+            if inner_char in ['y', 'Y']:
+                global should_reset
+                should_reset = True
+        elif char in ['h', 'H']:
+            global should_reset_hostnames
+            should_reset_hostnames = True
+        elif char in ['i', 'I']:
+            sort_key = 'ipAddress'
     except:
         pass
 
@@ -228,6 +241,17 @@ def display_current_stats(current_stats, unit=None):
 def run_indefinitely(modem_address, modem_password):
     last_run_dict = {}
     while running:
+        global should_reset
+        global should_reset_hostnames
+        global mac_to_hostname
+        if should_reset is True:
+            reset_modem_stats(modem_address, modem_password)
+            should_reset = False
+
+        if should_reset_hostnames is True:
+            mac_to_hostname = create_mac_to_hostname(get_modem_mac_names(ip_addr, results.password))
+            should_reset_hostnames = False
+
         modem_stats = get_modem_stats(modem_address, modem_password)
         per_ip_modem_stats = split_modem_stats(modem_stats)
 
@@ -253,10 +277,10 @@ if __name__ == '__main__':
                         required=False)
     parser.add_argument('-s', action='store', dest='sleep_time', help='sleep time between each request (seconds)',
                         default=1, required=False, type=float)
-    parser.add_argument('--reset', action='store_true', dest='reset', help='Reset usage data', default=False,
-                        required=False)
     parser.add_argument('-p', action='store', dest='password', help='Modem password', default=False,
                         required=True)
+    parser.add_argument('--reset', action='store_true', dest='reset', help='Reset usage data', default=False,
+                        required=False)
 
     results = parser.parse_args()
 
@@ -290,10 +314,11 @@ if __name__ == '__main__':
     global running
     running = True
 
-    if results.reset is True:
-        print 'Resetting usage data...'
-        time.sleep(1)
-        reset_modem_stats(ip_addr, results.password)
+    global should_reset
+    should_reset = results.reset
+
+    global should_reset_hostnames
+    should_reset_hostnames = False
 
     try:
         run_indefinitely(ip_addr, results.password)
