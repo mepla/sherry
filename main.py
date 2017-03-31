@@ -255,6 +255,7 @@ def run_indefinitely(modem_address, modem_password):
         if configs.should_reset is True:
             reset_modem_stats(modem_address, modem_password)
             configs.should_reset = False
+            last_run_dict = {}
 
         if configs.should_reset_hostnames is True:
             configs.mac_to_hostname = create_mac_to_hostname(get_modem_mac_names(ip_addr, modem_password))
