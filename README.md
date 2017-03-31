@@ -91,6 +91,8 @@ All data is retreived from `Web Interface > Advanced > System Tools > Statistics
 
 The bandwidth usage (per second column) is calculated like this: `(Current Bytes - Last Current Bytes)/sleep_time`
 
+## Limitations
+The most obvious limitation is the data fetched from `Web Interface > Advanced > System Tools > Statistics` is actually the total number of bytes going in and out of a connected device, so the values you see in Sherry (Total and Current speed) are actually the sum of inbound and outbound usage of a specific device. I currently am not able to find a way to calculate values based on traffic direction. (There is divided statistics located at `Web Interface > Advanced > Wireless > Statistics`, but it only gives number of packets not bytes.)
 
 ## Do I suck?
 Well I did this in a bit of a hurry so the code is pretty messy and there are a lot of issues that I know can be improved but there are probably a lot that I don't know. So I'd appreciate it if you have any suggestions or better ways to do things.
