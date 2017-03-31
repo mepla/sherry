@@ -11,7 +11,20 @@ from tabulate import tabulate
 from operator import itemgetter
 
 
-class FakeCurses():
+class Config(object):
+    def __init__(self):
+        self.mac_to_hostname = {}
+        self.sleep_time = 1.0
+        self.global_unit = 'kB'
+        self.terminal_available = False
+        self.curses_screen = None
+        self.sort_key = 'bytesPerSec'
+        self.running = True
+        self.should_reset = False
+        self.should_reset_hostnames = False
+
+
+class FakeCurses(object):
     def addstr(self, s):
         print s
 
@@ -177,7 +190,8 @@ class MachineUsage(object):
 
 
 def display_current_stats(current_stats, unit=None):
-    global global_unit
+    curses_screen = configs.curses_screen
+
     curses_screen.clear()
 
     convert_values = {'B': 1, 'kB': float(1)/float(1024),
@@ -185,7 +199,7 @@ def display_current_stats(current_stats, unit=None):
                       'mb': float(1)/float(1024**2) * 8, 'mB': float(1)/float(1024**2)}
 
     if not unit:
-        unit = global_unit
+        unit = configs.global_unit
 
     if unit not in convert_values:
         unit = 'kB'
@@ -196,7 +210,7 @@ def display_current_stats(current_stats, unit=None):
     tab_array = []
     for machine_stat in current_stats:
         tab_array.append([machine_stat.ipAddress, machine_stat.macAddress,
-                          mac_to_hostname.get(machine_stat.macAddress, '-'),
+                          configs.mac_to_hostname.get(machine_stat.macAddress, '-'),
                           round(machine_stat.bytesPerSec * convert_value, 2),
                           int(machine_stat.totalBytes * convert_value)])
 
@@ -207,50 +221,43 @@ def display_current_stats(current_stats, unit=None):
     curses_screen.nodelay(True)
     try:
         char = curses_screen.getkey()
-        global sort_key
         if char in ['c', 'C']:
-            sort_key = 'bytesPerSec'
+            configs.sort_key = 'bytesPerSec'
         elif char in ['t', 'T']:
-            sort_key = 'totalBytes'
+            configs.sort_key = 'totalBytes'
         elif char in ['u', 'U']:
             curses_screen.nodelay(False)
             curses_screen.addstr('\n\nEnter unit: ')
             curses_screen.refresh()
             string = curses_screen.getstr()
-            global_unit = string
+            configs.global_unit = string
         elif char in ['q', 'Q']:
-            global running
-            running = False
+            configs.running = False
         elif char in ['r', 'R']:
             curses_screen.nodelay(False)
             curses_screen.addstr('\n\nAre you sure you want to reset data? (y/n): ')
             curses_screen.refresh()
             inner_char = curses_screen.getkey()
             if inner_char in ['y', 'Y']:
-                global should_reset
-                should_reset = True
+                configs.should_reset = True
         elif char in ['h', 'H']:
-            global should_reset_hostnames
-            should_reset_hostnames = True
+            configs.should_reset_hostnames = True
         elif char in ['i', 'I']:
-            sort_key = 'ipAddress'
+            configs.sort_key = 'ipAddress'
     except:
         pass
 
 
 def run_indefinitely(modem_address, modem_password):
     last_run_dict = {}
-    while running:
-        global should_reset
-        global should_reset_hostnames
-        global mac_to_hostname
-        if should_reset is True:
+    while configs.running:
+        if configs.should_reset is True:
             reset_modem_stats(modem_address, modem_password)
-            should_reset = False
+            configs.should_reset = False
 
-        if should_reset_hostnames is True:
-            mac_to_hostname = create_mac_to_hostname(get_modem_mac_names(ip_addr, results.password))
-            should_reset_hostnames = False
+        if configs.should_reset_hostnames is True:
+            configs.mac_to_hostname = create_mac_to_hostname(get_modem_mac_names(ip_addr, results.password))
+            configs.should_reset_hostnames = False
 
         modem_stats = get_modem_stats(modem_address, modem_password)
         per_ip_modem_stats = split_modem_stats(modem_stats)
@@ -259,14 +266,14 @@ def run_indefinitely(modem_address, modem_password):
             if ip in last_run_dict:
                 last_total_bytes = last_run_dict[ip].get('totalBytes')
                 current_total_bytes = ip_stats.get('totalBytes')
-                per_second = float(current_total_bytes - last_total_bytes) / float(sleep_time)
+                per_second = float(current_total_bytes - last_total_bytes) / float(configs.sleep_time)
                 ip_stats['bytesPerSec'] = round(per_second, 2)
 
-        sorted_list = sorted(per_ip_modem_stats.values(), key=itemgetter(sort_key), reverse=True)
+        sorted_list = sorted(per_ip_modem_stats.values(), key=itemgetter(configs.sort_key), reverse=True)
         sorted_list = [MachineUsage(x) for x in sorted_list]
         display_current_stats(sorted_list)
         last_run_dict = dict(per_ip_modem_stats)
-        time.sleep(sleep_time)
+        time.sleep(configs.sleep_time)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -286,16 +293,14 @@ if __name__ == '__main__':
 
     ip_addr = results.ip_addr
 
-    global mac_to_hostname
-    mac_to_hostname = create_mac_to_hostname(get_modem_mac_names(ip_addr, results.password))
+    global configs
+    configs = Config()
 
-    global sleep_time
-    sleep_time = results.sleep_time
-    if sleep_time < 0.5:
+    configs.sleep_time = results.sleep_time
+    if configs.sleep_time < 0.5:
         raise Exception('sleep_time can not be less than 0.5')
 
-    global global_unit
-    global_unit = results.unit
+    configs.global_unit = results.unit
 
     if os.environ.get("TERM"):
         stdscr = curses.initscr()
@@ -305,20 +310,8 @@ if __name__ == '__main__':
         stdscr = FakeCurses()
         curses = FakeCurses
 
-    global curses_screen
-    curses_screen = stdscr
-
-    global sort_key
-    sort_key = 'bytesPerSec'
-
-    global running
-    running = True
-
-    global should_reset
-    should_reset = results.reset
-
-    global should_reset_hostnames
-    should_reset_hostnames = False
+    configs.curses_screen = stdscr
+    configs.should_reset = results.reset
 
     try:
         run_indefinitely(ip_addr, results.password)
