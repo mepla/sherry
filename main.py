@@ -18,10 +18,43 @@ class Config(object):
         self.global_unit = 'kB'
         self.terminal_available = False
         self.curses_screen = None
-        self.sort_key = 'bytesPerSec'
+        self.sort_key = StatKeys.BYTE_PER_SECOND_KEY
         self.running = True
         self.should_reset = False
-        self.should_reset_hostnames = False
+        self.should_reset_hostnames = True
+
+
+class HostnameKeys(object):
+    IP_ADDRESS_KEY = 'IPAddress'
+    MAC_ADDRESS_KEY = 'MACAddress'
+    HOST_NAME_KEY = 'hostName'
+
+
+class StatKeys(object):
+    IP_ADDRESS_KEY = 'ipAddress'
+    MAC_ADDRESS_KEY = 'macAddress'
+    TOTAL_BYTES_KEY = 'totalBytes'
+    CURRENT_BYTES_KEY = 'currBytes'
+    BYTE_PER_SECOND_KEY = 'bytesPerSec'
+
+    '''
+    Possible keys coming from modem are:
+        'ipAddress',
+        'macAddress',
+        'totalPkts',
+        'totalBytes',
+        'currPkts',
+        'currBytes',
+        'currIcmp',
+        'currUdp',
+        'currSyn',
+        'currIcmpMax',
+        'currUdpMax',
+        'currSynMax',
+
+     Self added keys:
+        'bytesPerSec'
+    '''
 
 
 class FakeCurses(object):
@@ -114,7 +147,7 @@ def create_mac_to_hostname(modem_mac_names_str):
         except:
             continue
 
-        if key == 'MACAddress':
+        if key == HostnameKeys.MAC_ADDRESS_KEY:
             mac_addr = value
             if mac_addr != current_mac:
                 current_mac = mac_addr
@@ -123,7 +156,7 @@ def create_mac_to_hostname(modem_mac_names_str):
             if current_mac not in split_dict:
                 split_dict[current_mac] = {}
 
-            if key == 'hostName':
+            if key == HostnameKeys.HOST_NAME_KEY:
                 split_dict[current_mac] = value
 
     return split_dict
@@ -139,7 +172,7 @@ def split_modem_stats(modem_stats):
         except:
             continue
 
-        if key == 'ipAddress':
+        if key == StatKeys.IP_ADDRESS_KEY:
             ip_addr = decimal_to_ip(int(value))
             if ip_addr != current_ip:
                 current_ip = ip_addr
@@ -147,46 +180,14 @@ def split_modem_stats(modem_stats):
 
         if current_ip:
             if current_ip not in split_dict:
-                split_dict[current_ip] = {'bytesPerSec': 0}
+                split_dict[current_ip] = {StatKeys.BYTE_PER_SECOND_KEY: 0}
 
-            if key not in ['ipAddress', 'macAddress']:
+            if key not in [StatKeys.IP_ADDRESS_KEY, StatKeys.MAC_ADDRESS_KEY]:
                 value = int(value)
 
             split_dict[current_ip][key] = value
 
     return split_dict
-
-
-class MachineUsage(object):
-    def __init__(self, data_dict=None):
-        self.keys = ['ipAddress',
-                     'macAddress',
-                     'totalPkts',
-                     'totalBytes',
-                     'currPkts',
-                     'currBytes',
-                     'currIcmp',
-                     'currUdp',
-                     'currSyn',
-                     'currIcmpMax',
-                     'currUdpMax',
-                     'currSynMax',
-                     'bytesPerSec']
-
-        if data_dict:
-            for k, v in data_dict.items():
-                if k not in ['ipAddress', 'macAddress']:
-                    v = int(v)
-
-                self.__setattr__(k, v)
-
-    def __str__(self):
-        return_str = '-------\n'
-        for k in self.keys:
-            return_str += '{}={}\n'.format(k, self.__getattribute__(k))
-        return_str += '-------\n'
-
-        return return_str
 
 
 def display_current_stats(current_stats, unit=None):
@@ -209,10 +210,10 @@ def display_current_stats(current_stats, unit=None):
     header_arr = ['IP', 'MAC', "Name", 'Current ({}ps)'.format(unit), 'Total ({})'.format(unit)]
     tab_array = []
     for machine_stat in current_stats:
-        tab_array.append([machine_stat.ipAddress, machine_stat.macAddress,
-                          configs.mac_to_hostname.get(machine_stat.macAddress, '-'),
-                          round(machine_stat.bytesPerSec * convert_value, 2),
-                          int(machine_stat.totalBytes * convert_value)])
+        tab_array.append([machine_stat.get(StatKeys.IP_ADDRESS_KEY), machine_stat.get(StatKeys.MAC_ADDRESS_KEY),
+                          configs.mac_to_hostname.get(machine_stat.get(StatKeys.MAC_ADDRESS_KEY), '-'),
+                          round(machine_stat.get(StatKeys.BYTE_PER_SECOND_KEY) * convert_value, 2),
+                          int(machine_stat.get(StatKeys.TOTAL_BYTES_KEY) * convert_value)])
 
     curses_screen.addstr(tabulate(tab_array, headers=header_arr, tablefmt="psql"))
     curses_screen.addstr('\n\n(q)Quit (t,c,i)Sort Total,Current,IP (r)Reset Totals (h)Reset Hostnames (u)Change Unit: ')
@@ -222,9 +223,9 @@ def display_current_stats(current_stats, unit=None):
     try:
         char = curses_screen.getkey()
         if char in ['c', 'C']:
-            configs.sort_key = 'bytesPerSec'
+            configs.sort_key = StatKeys.BYTE_PER_SECOND_KEY
         elif char in ['t', 'T']:
-            configs.sort_key = 'totalBytes'
+            configs.sort_key = StatKeys.TOTAL_BYTES_KEY
         elif char in ['u', 'U']:
             curses_screen.nodelay(False)
             curses_screen.addstr('\n\nEnter unit: ')
@@ -243,7 +244,7 @@ def display_current_stats(current_stats, unit=None):
         elif char in ['h', 'H']:
             configs.should_reset_hostnames = True
         elif char in ['i', 'I']:
-            configs.sort_key = 'ipAddress'
+            configs.sort_key = StatKeys.IP_ADDRESS_KEY
     except:
         pass
 
@@ -256,7 +257,7 @@ def run_indefinitely(modem_address, modem_password):
             configs.should_reset = False
 
         if configs.should_reset_hostnames is True:
-            configs.mac_to_hostname = create_mac_to_hostname(get_modem_mac_names(ip_addr, results.password))
+            configs.mac_to_hostname = create_mac_to_hostname(get_modem_mac_names(ip_addr, modem_password))
             configs.should_reset_hostnames = False
 
         modem_stats = get_modem_stats(modem_address, modem_password)
@@ -264,13 +265,12 @@ def run_indefinitely(modem_address, modem_password):
 
         for ip, ip_stats in per_ip_modem_stats.items():
             if ip in last_run_dict:
-                last_total_bytes = last_run_dict[ip].get('totalBytes')
-                current_total_bytes = ip_stats.get('totalBytes')
+                last_total_bytes = last_run_dict[ip].get(StatKeys.TOTAL_BYTES_KEY)
+                current_total_bytes = ip_stats.get(StatKeys.TOTAL_BYTES_KEY)
                 per_second = float(current_total_bytes - last_total_bytes) / float(configs.sleep_time)
-                ip_stats['bytesPerSec'] = round(per_second, 2)
+                ip_stats[StatKeys.BYTE_PER_SECOND_KEY] = round(per_second, 2)
 
         sorted_list = sorted(per_ip_modem_stats.values(), key=itemgetter(configs.sort_key), reverse=True)
-        sorted_list = [MachineUsage(x) for x in sorted_list]
         display_current_stats(sorted_list)
         last_run_dict = dict(per_ip_modem_stats)
         time.sleep(configs.sleep_time)
