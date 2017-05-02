@@ -231,7 +231,7 @@ def display_current_stats(current_stats, unit=None):
     if configs.summary_mode is True:
         help_str = '\n\n(m)Toggle MAC: '
     else:
-        help_str = '\n\n(q)Quit (t,c,i)Sort Total,Current,IP (r)Reset Totals (h)Reset Hostnames (m)Toggle MAC (u)Change Unit: 'git
+        help_str = '\n\n(q)Quit (t,c,i)Sort Total,Current,IP (r)Reset Totals (h)Reset Hostnames (m)Toggle MAC (u)Change Unit: '
 
     curses_screen.addstr(help_str)
     curses_screen.refresh()
