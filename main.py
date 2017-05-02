@@ -22,6 +22,7 @@ class Config(object):
         self.running = True
         self.should_reset = False
         self.should_reset_hostnames = True
+        self.summary_mode = False
 
 
 class HostnameKeys(object):
@@ -207,16 +208,32 @@ def display_current_stats(current_stats, unit=None):
 
     convert_value = convert_values.get(unit)
 
-    header_arr = ['IP', 'MAC', "Name", 'Current ({}ps)'.format(unit), 'Total ({})'.format(unit)]
+    if configs.summary_mode is True:
+        header_arr = ['IP', "Name", 'Cur({}ps)'.format(unit), 'Tot({})'.format(unit)]
+    else:
+        header_arr = ['IP', 'MAC', "Name", 'Current ({}ps)'.format(unit), 'Total ({})'.format(unit)]
+
     tab_array = []
     for machine_stat in current_stats:
-        tab_array.append([machine_stat.get(StatKeys.IP_ADDRESS_KEY), machine_stat.get(StatKeys.MAC_ADDRESS_KEY),
+        arr = [machine_stat.get(StatKeys.IP_ADDRESS_KEY), machine_stat.get(StatKeys.MAC_ADDRESS_KEY),
                           configs.mac_to_hostname.get(machine_stat.get(StatKeys.MAC_ADDRESS_KEY), '-'),
                           round(machine_stat.get(StatKeys.BYTE_PER_SECOND_KEY) * convert_value, 2),
-                          int(machine_stat.get(StatKeys.TOTAL_BYTES_KEY) * convert_value)])
+                          int(machine_stat.get(StatKeys.TOTAL_BYTES_KEY) * convert_value)]
+        if configs.summary_mode is True:
+            del arr[1]
+            name_field = arr[1]
+            if len(name_field) > 9:
+                arr[1] = name_field[0:9]
+
+        tab_array.append(arr)
 
     curses_screen.addstr(tabulate(tab_array, headers=header_arr, tablefmt="psql"))
-    curses_screen.addstr('\n\n(q)Quit (t,c,i)Sort Total,Current,IP (r)Reset Totals (h)Reset Hostnames (u)Change Unit: ')
+    if configs.summary_mode is True:
+        help_str = '\n\n(m)Toggle MAC: '
+    else:
+        help_str = '\n\n(q)Quit (t,c,i)Sort Total,Current,IP (r)Reset Totals (h)Reset Hostnames (m)Toggle MAC (u)Change Unit: 'git
+
+    curses_screen.addstr(help_str)
     curses_screen.refresh()
 
     curses_screen.nodelay(True)
@@ -226,6 +243,8 @@ def display_current_stats(current_stats, unit=None):
             configs.sort_key = StatKeys.BYTE_PER_SECOND_KEY
         elif char in ['t', 'T']:
             configs.sort_key = StatKeys.TOTAL_BYTES_KEY
+        elif char in ['m', 'M']:
+            configs.summary_mode = not configs.summary_mode
         elif char in ['u', 'U']:
             curses_screen.nodelay(False)
             curses_screen.addstr('\n\nEnter unit: ')
@@ -289,6 +308,7 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('--reset', action='store_true', dest='reset', help='Reset usage data (equivalent to using the reset button in statistics menu of web interface)', default=False,
                         required=False)
+    parser.add_argument('--summary', action='store_true', dest='summary', help='Open Sherry in summary mode (No MAC column)', default=False, required=False)
 
     results = parser.parse_args()
 
@@ -302,6 +322,8 @@ if __name__ == '__main__':
         raise Exception('sleep_time can not be less than 0.5')
 
     configs.global_unit = results.unit
+    if results.summary is True:
+        configs.summary_mode = True
 
     if os.environ.get("TERM"):
         stdscr = curses.initscr()
