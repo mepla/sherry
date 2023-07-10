@@ -231,7 +231,7 @@ def display_current_stats(current_stats, unit=None):
     if configs.summary_mode is True:
         help_str = '\n\n(m)Toggle MAC: '
     else:
-        help_str = '\n\n(q)Quit (t,c,i)Sort Total,Current,IP (r)Reset Totals (h)Reset Hostnames (m)Toggle MAC (u)Change Unit: 'git
+        help_str = '\n\n(q)Quit (t,c,i)Sort Total,Current,IP (r)Reset Totals (h)Reset Hostnames (m)Toggle MAC (u)Change Unit: '
 
     curses_screen.addstr(help_str)
     curses_screen.refresh()
@@ -309,6 +309,7 @@ if __name__ == '__main__':
     parser.add_argument('--reset', action='store_true', dest='reset', help='Reset usage data (equivalent to using the reset button in statistics menu of web interface)', default=False,
                         required=False)
     parser.add_argument('--summary', action='store_true', dest='summary', help='Open Sherry in summary mode (No MAC column)', default=False, required=False)
+    parser.add_argument('--new', action='store_true', dest='summary', help='Open Sherry in summary mode (No MAC column)', default=False, required=False)
 
     results = parser.parse_args()
 
