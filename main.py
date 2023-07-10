@@ -309,6 +309,7 @@ if __name__ == '__main__':
     parser.add_argument('--reset', action='store_true', dest='reset', help='Reset usage data (equivalent to using the reset button in statistics menu of web interface)', default=False,
                         required=False)
     parser.add_argument('--summary', action='store_true', dest='summary', help='Open Sherry in summary mode (No MAC column)', default=False, required=False)
+    parser.add_argument('--new', action='store_true', dest='summary', help='Open Sherry in summary mode (No MAC column)', default=False, required=False)
 
     results = parser.parse_args()
 
